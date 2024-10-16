@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import logging
+from pprint import pprint
 
 import requests
 
@@ -10,12 +11,30 @@ import config
 logger = logging.getLogger(__name__)
 
 
+class URLConfig:
+    """
+    Container for unified URL generation based on a given hostname
+    """
+    def __init__(self, hostname:str=config.TAIGA_HOST):
+        self.__hostname = hostname
+
+    @property
+    def auth(self):
+        return f"{self.__hostname}/api/v1/auth"
+
+    def tasks(self, project_id:int=None, milestone_id:int=None):
+        base_url = f"{self.__hostname}/api/v1/tasks"
+        if project_id or milestone_id:
+            base_url += "?{project_id=}&{milestone_id=}"
+        return base_url
+
+
 if __name__ == '__main__':
     token = None
-    logger.info("hi")
-    logger.info(config.TAIGA_HOST, config.TARGET_MILESTONES)
+    urls = URLConfig(config.TAIGA_HOST)
+
     response = requests.post(
-        config.TAIGA_HOST + '/api/v1/auth', json={
+        urls.auth, json={
             "username": config.LOGIN,
             "password": config.PASSWORD,
             "type": "normal",
@@ -28,4 +47,9 @@ if __name__ == '__main__':
         exit(0)
 
     for milestone in config.TARGET_MILESTONES:
-        logger.debug(f'Trying to retreive project {milestone["project_id"]}, sprint {milestone["milestone_id"]}')
+        project_id = milestone['project_id']
+        milestone_id = milestone['milestone_id']
+        logger.debug(f'Trying to retreive project {project_id}, sprint {milestone_id}')
+        response = requests.get(urls.tasks(project_id, milestone_id))
+        response.raise_for_status()
+        pprint(response.json())
