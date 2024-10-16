@@ -39,7 +39,6 @@ class SessionStorage:
     def __init__(self):
         with open(self.__store_file_path, 'r') as store_file:
             self.__data = json.load(store_file)
-        self._validate_data()
 
     @property
     def token(self):
@@ -48,12 +47,6 @@ class SessionStorage:
     @token.setter
     def token(self, value):
         self.__data['token'] = value
-
-    def _validate_data(self):
-        # for key in ('token'):
-        for key in ():
-            if key not in self.__data:
-                raise exceptions.StorageException(f'Missing {key} if storage file!')
 
     def save(self):
         with open(self.__store_file_path, 'w') as store_file:
