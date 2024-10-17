@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 
+import asyncio
 import logging
 import json
 
 import requests
 
 import config
+# from bot import Bot
 
 logger = logging.getLogger(__name__)
-
 
 class URLConfig:
     """
@@ -46,6 +47,10 @@ class SessionStorage:
     def token(self, value):
         self.__data['token'] = value
 
+    @token.deleter
+    def token(self):
+        del self.__data['token']
+
     @property
     def tasks(self):
         return self.__data.get('tasks', list())
@@ -61,6 +66,10 @@ class SessionStorage:
     @task_ids.setter
     def task_ids(self, value):
         self.__data['task_ids'] = list(value)
+
+    @task_ids.deleter
+    def task_ids(self):
+        del self.__data['task_ids']
 
     def save(self):
         with open(self.__store_file_path, 'w') as store_file:
@@ -121,9 +130,31 @@ class TaigaClient:
                 urls.tasks(project_id, milestone_id),
                 headers={'Authorization': f'Bearer {session.token}'}
             )
+            if response.status_code == 401:
+                del self._session.token
+                self._session.save()
             response.raise_for_status()
             result.update(set(map(lambda x: int(x['id']), response.json())))
         return result
+
+
+async def main(new_tasks: set[int]):
+    from aiogram import Bot
+    from aiogram.client.default import DefaultBotProperties
+    from aiogram.enums import ParseMode
+
+    async with Bot(
+        token=config.TOKEN,
+        default=DefaultBotProperties(
+            parse_mode=ParseMode.HTML,
+        ),
+    ) as bot:
+        await bot.send_message(chat_id=config.CHAT_ID, text="Андрюха! У нас труп! Возможно криминал! По коням!\n"
+            "Подъехали новые задачки:\n"
+            + "\n".join((f"{config.TAIGA_HOST}/project/asp-backend/task/{task_id}" for task_id in new_ids))
+        )
+
+
 
 if __name__ == '__main__':
     urls = URLConfig(config.TAIGA_HOST)
@@ -132,4 +163,7 @@ if __name__ == '__main__':
 
     client.login()
     new_ids = client.update_tasks()
-    print("New ids:", new_ids)
+
+    if new_ids:
+        asyncio.run(main(new_ids))
+

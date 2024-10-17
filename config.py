@@ -13,3 +13,6 @@ TARGET_MILESTONES = [
         "milestone_id": 1,
     }
 ]
+
+TOKEN = os.environ["BOT_TOKEN"]
+CHAT_ID = os.environ["TARGET_CHAT_ID"]
